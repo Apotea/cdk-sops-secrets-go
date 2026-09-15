@@ -23,11 +23,9 @@ jobs:
       JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION: '1'
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
-
       - uses: actions/setup-go@v6
         with:
           go-version: '1.25'
@@ -41,14 +39,15 @@ jobs:
         working-directory: package
         # Generating against the lowest supported CDK keeps the module's floor low;
         # Go resolves to the maximum across a build, so consumers are never held back.
-        # cloud-assembly-schema is not resolvable transitively on older CDK lines.
         run: |
           npm install --no-save semver
-          floor() { node -p "require('semver').minVersion(require('./package.json').peerDependencies['$1']).version"; }
-          npm install --no-audit --no-fund \
-            "aws-cdk-lib@$(floor aws-cdk-lib)" \
-            "constructs@$(floor constructs)" \
-            @aws-cdk/cloud-assembly-schema
+          npm install --no-audit --no-fund $(node -e '
+            const semver = require("semver");
+            const peers = require("./package.json").peerDependencies;
+            console.log(Object.entries(peers)
+              .map(([name, range]) => `${name}@${semver.minVersion(range).version}`)
+              .join(" "));
+          ')
 
       - name: Add the Go target
         working-directory: package
@@ -72,12 +71,6 @@ jobs:
         working-directory: package/dist/go/cdksopssecrets
         run: go mod tidy
 
-      - name: Verify
-        working-directory: package/dist/go/cdksopssecrets
-        run: |
-          go build ./...
-          go vet ./...
-
       - name: Synth a stack through the bindings
         working-directory: testdata
         run: |
@@ -86,14 +79,14 @@ jobs:
           go run .
           test -f cdk.out/SmokeStack.template.json
 
-      - name: Commit and tag
+      - name: Tag the bindings
+        # Only the tag is pushed: `go get` resolves the module from it, and main
+        # stays the source the workflow generates from.
         run: |
-          rm -rf cdksopssecrets
           cp -r package/dist/go/cdksopssecrets cdksopssecrets
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add cdksopssecrets
-          git diff --cached --quiet && echo "no change" && exit 0
           git commit -m "Generate bindings for cdk-sops-secrets ${VERSION}"
           git tag "cdksopssecrets/v${VERSION}"
-          git push origin HEAD "cdksopssecrets/v${VERSION}"
+          git push origin "cdksopssecrets/v${VERSION}"

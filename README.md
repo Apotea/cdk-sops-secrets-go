@@ -22,8 +22,8 @@ Tags mirror the upstream release they were generated from: `cdksopssecrets/v2.8.
 `cdk-sops-secrets@2.8.5`, including that release's Lambda binary.
 
 `.github/workflows/release.yml` generates a version: it packs the published npm package, adds a
-jsii Go target, runs `jsii-pacmak`, compiles and synthesizes a stack through the result, then
-commits and tags. Bindings are generated against the lowest `aws-cdk-lib` the upstream release
+jsii Go target, runs `jsii-pacmak`, synthesizes a stack through the result, then tags the
+generated sources. Bindings are generated against the lowest `aws-cdk-lib` the upstream release
 supports, so the module's floor stays low — Go resolves to the maximum across a build.
 
 Upstream tracks Go support in
