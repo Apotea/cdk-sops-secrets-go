@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
 
 concurrency:
   group: release
@@ -75,9 +74,7 @@ jobs:
           go run .
           test -f cdk.out/SmokeStack.template.json
 
-      - name: Open a pull request with the bindings
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Push the bindings for review
         run: |
           rm -rf cdksopssecrets
           cp -r package/dist/go/cdksopssecrets cdksopssecrets
@@ -85,10 +82,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "release/${VERSION}"
           git add -A cdksopssecrets
-          git diff --cached --quiet && echo "already current" && exit 0
+          git diff --cached --quiet && echo "already current" >> "$GITHUB_STEP_SUMMARY" && exit 0
           git commit -m "Generate bindings for cdk-sops-secrets ${VERSION}"
           git push -f origin "release/${VERSION}"
-          gh pr create --base main --head "release/${VERSION}" \
-            --title "Generate bindings for cdk-sops-secrets ${VERSION}" \
-            --body "Generated from \`cdk-sops-secrets@${VERSION}\` on npm. Compiled and synthesized a stack through the result before this branch was pushed. Merging tags \`cdksopssecrets/v${VERSION}\`." \
-            || gh pr edit "release/${VERSION}" --title "Generate bindings for cdk-sops-secrets ${VERSION}"
+          echo "[Open the pull request](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/main...release/${VERSION}?expand=1)" >> "$GITHUB_STEP_SUMMARY"
