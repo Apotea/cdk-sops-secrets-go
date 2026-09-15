@@ -35,18 +35,13 @@ jobs:
           npm pack "cdk-sops-secrets@${VERSION}"
           tar xzf "cdk-sops-secrets-${VERSION}.tgz"
 
-      - name: Install peer deps at their floor
+      - name: Install peer deps
         working-directory: package
-        # Generating against the lowest supported CDK keeps the module's floor low;
-        # Go resolves to the maximum across a build, so consumers are never held back.
         run: |
-          npm install --no-save semver
-          npm install --no-audit --no-fund $(node -e '
-            const semver = require("semver");
-            const peers = require("./package.json").peerDependencies;
-            console.log(Object.entries(peers)
-              .map(([name, range]) => `${name}@${semver.minVersion(range).version}`)
-              .join(" "));
+          npm install --no-audit --no-fund $(node -p '
+            Object.entries(require("./package.json").peerDependencies)
+              .map(([name, range]) => `${name}@${range}`)
+              .join(" ")
           ')
 
       - name: Add the Go target
