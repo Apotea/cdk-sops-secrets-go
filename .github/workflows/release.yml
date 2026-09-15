@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: release
@@ -74,14 +75,20 @@ jobs:
           go run .
           test -f cdk.out/SmokeStack.template.json
 
-      - name: Tag the bindings
-        # Only the tag is pushed: `go get` resolves the module from it, and main
-        # stays the source the workflow generates from.
+      - name: Open a pull request with the bindings
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          rm -rf cdksopssecrets
           cp -r package/dist/go/cdksopssecrets cdksopssecrets
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add cdksopssecrets
+          git checkout -b "release/${VERSION}"
+          git add -A cdksopssecrets
+          git diff --cached --quiet && echo "already current" && exit 0
           git commit -m "Generate bindings for cdk-sops-secrets ${VERSION}"
-          git tag "cdksopssecrets/v${VERSION}"
-          git push origin "cdksopssecrets/v${VERSION}"
+          git push -f origin "release/${VERSION}"
+          gh pr create --base main --head "release/${VERSION}" \
+            --title "Generate bindings for cdk-sops-secrets ${VERSION}" \
+            --body "Generated from \`cdk-sops-secrets@${VERSION}\` on npm. Compiled and synthesized a stack through the result before this branch was pushed. Merging tags \`cdksopssecrets/v${VERSION}\`." \
+            || gh pr edit "release/${VERSION}" --title "Generate bindings for cdk-sops-secrets ${VERSION}"
