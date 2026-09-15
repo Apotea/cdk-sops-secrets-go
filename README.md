@@ -23,8 +23,8 @@ Tags mirror the upstream release they were generated from: `cdksopssecrets/v2.8.
 
 `.github/workflows/release.yml` generates a version: it packs the published npm package, adds a
 jsii Go target, runs `jsii-pacmak`, synthesizes a stack through the result, then tags the
-generated sources. Bindings are generated against the lowest `aws-cdk-lib` the upstream release
-supports, so the module's floor stays low — Go resolves to the maximum across a build.
+generated sources. Peer dependencies are installed at the newest version satisfying upstream's
+range, which is the interface surface Go resolves consumers to.
 
 Upstream tracks Go support in
 [dbsystel/cdk-sops-secrets#1434](https://github.com/dbsystel/cdk-sops-secrets/issues/1434). This
