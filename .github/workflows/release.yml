@@ -23,7 +23,15 @@ jobs:
       VERSION: ${{ inputs.version }}
       JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION: '1'
     steps:
+      - uses: actions/create-github-app-token@v2
+        id: token
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v6
+        with:
+          token: ${{ steps.token.outputs.token }}
       - uses: actions/setup-node@v6
         with:
           node-version: '24'
@@ -75,9 +83,9 @@ jobs:
           go run .
           test -f cdk.out/SmokeStack.template.json
 
-      - name: Open a pull request with the bindings
+      - name: Commit, tag and open the pull request
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
         run: |
           rm -rf cdksopssecrets
           cp -r package/dist/go/cdksopssecrets cdksopssecrets
@@ -85,10 +93,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "release/${VERSION}"
           git add -A cdksopssecrets
-          git diff --cached --quiet && echo "already current" && exit 0
+          if git diff --cached --quiet; then
+            echo "bindings already current"
+            exit 0
+          fi
           git commit -m "Generate bindings for cdk-sops-secrets ${VERSION}"
+          git tag "cdksopssecrets/v${VERSION}"
           git push -f origin "release/${VERSION}"
+          git push origin "cdksopssecrets/v${VERSION}"
           gh pr create --base main --head "release/${VERSION}" \
             --title "Generate bindings for cdk-sops-secrets ${VERSION}" \
-            --body "Generated from \`cdk-sops-secrets@${VERSION}\` on npm. Compiled and synthesized a stack through the result before this branch was pushed. Merging tags \`cdksopssecrets/v${VERSION}\`." \
-            || gh pr edit "release/${VERSION}" --title "Generate bindings for cdk-sops-secrets ${VERSION}"
+            --body "Generated from \`cdk-sops-secrets@${VERSION}\` on npm, compiled, and verified by synthesizing a stack through the result. Tagged \`cdksopssecrets/v${VERSION}\`."
