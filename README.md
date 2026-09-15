@@ -22,10 +22,10 @@ Tags mirror the upstream release they were generated from: `cdksopssecrets/v2.8.
 `cdk-sops-secrets@2.8.5`, including that release's Lambda binary.
 
 `.github/workflows/release.yml` generates a version: it packs the published npm package, adds a
-jsii Go target, runs `jsii-pacmak`, synthesizes a stack through the result, then opens a pull
-request replacing `cdksopssecrets/`. Merging it triggers `tag.yml`, which tags the merged commit.
-Peer dependencies are installed at the newest version satisfying upstream's range, which is the
-interface surface Go resolves consumers to.
+jsii Go target, runs `jsii-pacmak`, synthesizes a stack through the result, then pushes
+`release/<version>` with `cdksopssecrets/` replaced. Merging that branch triggers `tag.yml`, which
+tags the merged commit. Peer dependencies are installed at the newest version satisfying
+upstream's range, which is the interface surface Go resolves consumers to.
 
 Upstream tracks Go support in
 [dbsystel/cdk-sops-secrets#1434](https://github.com/dbsystel/cdk-sops-secrets/issues/1434). This
