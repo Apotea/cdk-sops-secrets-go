@@ -19,23 +19,27 @@ concurrency:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       VERSION: ${{ inputs.version }}
       JSII_SILENCE_WARNING_UNTESTED_NODE_VERSION: '1'
     steps:
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
         id: token
         with:
           app-id: ${{ secrets.RELEASE_APP_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           token: ${{ steps.token.outputs.token }}
-      - uses: actions/setup-node@v6
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: '24'
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version: '1.25'
 
@@ -46,7 +50,7 @@ jobs:
 
       - name: Install peer deps
         working-directory: package
-        run: |
+        run: | # zizmor: ignore[adhoc-packages] resolves the newest peer deps in upstream's range, as the README states
           npm install --no-audit --no-fund $(node -p '
             Object.entries(require("./package.json").peerDependencies)
               .map(([name, range]) => `${name}@${range}`)
@@ -98,6 +102,7 @@ jobs:
             exit 0
           fi
           git commit -m "Generate bindings for cdk-sops-secrets ${VERSION}"
+          gh auth setup-git
           git tag "cdksopssecrets/v${VERSION}"
           git push -f origin "release/${VERSION}"
           git push origin "cdksopssecrets/v${VERSION}"
